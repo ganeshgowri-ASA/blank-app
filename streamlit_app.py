@@ -1,9 +1,7 @@
-"""
-Solar Resource Dashboard | Streamlit App
+"""Solar Resource Dashboard | Streamlit App
 Author: Ganesh Gowri
 Version: 1.0
 Last Updated: 2025-10-18
-
 This application provides an interactive dashboard to assess solar resource potential by location.
 Features:
 - API Key management
@@ -14,7 +12,6 @@ Features:
 - Satellite map overlays (Folium)
 - Detailed documentation and error handling
 """
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -26,13 +23,13 @@ import os
 
 # Page configuration
 st.set_page_config(
-    page_title="Solar Resource Dashboard",
+    page_title="Solar Resource Assessment App",
     page_icon="☀️",
     layout="wide"
 )
 
 # Header
-st.title("☀️ Solar Resource Dashboard")
+st.title("☀️ Solar Resource Assessment App")
 st.markdown("""
 Production-ready app for location-wise solar resource assessment and visualization.
 Supply your API key, pick a location, and explore deep insights for solar PV.
@@ -43,144 +40,198 @@ st.sidebar.header("Configuration")
 api_key = st.sidebar.text_input(
     "NREL API Key",
     type="password",
-    help="Enter your NREL API key. Get one free at https://developer.nrel.gov/signup/"
+    help="Get your free API key from https://developer.nrel.gov/signup/"
 )
 
+# Help message for API key
 if not api_key:
-    st.sidebar.warning("⚠️ Enter API key to enable data fetching")
-    st.stop()
+    st.sidebar.warning("⚠️ Please enter your NREL API key to proceed.")
+    st.sidebar.markdown("[Get your free NREL API key](https://developer.nrel.gov/signup/)")
 
-# Sidebar: Location controls
-st.sidebar.subheader("Location Selection")
-input_method = st.sidebar.radio("Select Input Method:", ["Manual Coordinates", "Map Selection"])
-if input_method == "Manual Coordinates":
-    latitude = st.sidebar.number_input("Latitude", min_value=-90.0, max_value=90.0, value=23.0, step=0.01)
-    longitude = st.sidebar.number_input("Longitude", min_value=-180.0, max_value=180.0, value=72.0, step=0.01)
-else:
-    st.sidebar.info("Click on the map below to select a location")
-    latitude = 23.0
-    longitude = 72.0
+# Sidebar: Location selection mode
+st.sidebar.header("Select Location")
+location_mode = st.sidebar.radio(
+    "How would you like to input location?",
+    ["Interactive Map", "Manual Input"]
+)
 
-# Map display
-st.subheader("Location Map")
-col1, col2 = st.columns([4, 1])
-with col1:
-    m = folium.Map(location=[latitude, longitude], zoom_start=6, tiles='Stamen Terrain')
+# Initialize session state for coordinates
+if 'latitude' not in st.session_state:
+    st.session_state.latitude = 28.6139
+if 'longitude' not in st.session_state:
+    st.session_state.longitude = 77.2090
+
+if location_mode == "Interactive Map":
+    st.subheader("📍 Select Location on Map")
+    st.markdown("Click on the map to select a location. Switch tile layers using the control on the top-right.")
+    
+    # Create folium map
+    m = folium.Map(
+        location=[st.session_state.latitude, st.session_state.longitude],
+        zoom_start=5,
+        tiles='Stamen Terrain',
+        attr='Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.'
+    )
+    
+    # Add additional tile layers with attr
+    folium.TileLayer('Stamen Toner', name='Toner', attr='Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.').add_to(m)
+    folium.TileLayer('cartodbpositron', name='Light Map', attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>').add_to(m)
+    folium.TileLayer('OpenStreetMap', name='OSM').add_to(m)
+    
+    # Add marker
     folium.Marker(
-        [latitude, longitude],
-        popup=f"Lat: {latitude:.4f}, Lon: {longitude:.4f}",
-        tooltip="Selected Location",
-        icon=folium.Icon(color="blue", icon="sun")
+        [st.session_state.latitude, st.session_state.longitude],
+        popup=f"Selected: {st.session_state.latitude:.4f}, {st.session_state.longitude:.4f}",
+        icon=folium.Icon(color='red', icon='info-sign')
     ).add_to(m)
-    folium.TileLayer('Stamen Toner', name='Toner').add_to(m)
-    folium.TileLayer('cartodbpositron', name='Light Map').add_to(m)
+    
     folium.LayerControl().add_to(m)
-
+    
+    # Display map and capture clicks
     map_data = st_folium(m, width=700, height=500)
-    if map_data and map_data.get("last_clicked"):
-        latitude = map_data["last_clicked"]["lat"]
-        longitude = map_data["last_clicked"]["lng"]
+    
+    # Update coordinates if map is clicked
+    if map_data and map_data.get('last_clicked'):
+        st.session_state.latitude = map_data['last_clicked']['lat']
+        st.session_state.longitude = map_data['last_clicked']['lng']
+        st.success(f"✅ Location updated: {st.session_state.latitude:.4f}, {st.session_state.longitude:.4f}")
+else:
+    st.subheader("📝 Manual Location Input")
+    col1, col2 = st.columns(2)
+    with col1:
+        manual_lat = st.number_input(
+            "Latitude",
+            min_value=-90.0,
+            max_value=90.0,
+            value=st.session_state.latitude,
+            format="%.4f"
+        )
+    with col2:
+        manual_lon = st.number_input(
+            "Longitude",
+            min_value=-180.0,
+            max_value=180.0,
+            value=st.session_state.longitude,
+            format="%.4f"
+        )
+    st.session_state.latitude = manual_lat
+    st.session_state.longitude = manual_lon
 
-with col2:
-    st.metric("Latitude", f"{latitude:.4f}°")
-    st.metric("Longitude", f"{longitude:.4f}°")
+# Display current location
+st.sidebar.success(f"📍 Current: {st.session_state.latitude:.4f}, {st.session_state.longitude:.4f}")
 
-# Sidebar: Data parameters
-st.sidebar.subheader("Data Parameters")
-available_years = list(range(1998, 2022))
-year = st.sidebar.selectbox("Year", available_years, index=len(available_years)-1)
+# Data parameters
+st.sidebar.header("Data Parameters")
+
+# Year selection
+year = st.sidebar.selectbox(
+    "Year",
+    list(range(2023, 1997, -1)),
+    help="Select the year for solar data"
+)
+
+# Interval selection
+interval = st.sidebar.selectbox(
+    "Time Interval",
+    ["60", "30", "15", "5"],
+    help="Data time resolution in minutes"
+)
+
+# Attribute selection
 available_attributes = [
-    "ghi", "dni", "dhi", "air_temperature", "wind_speed",
-    "surface_pressure", "relative_humidity", "solar_zenith_angle"
+    'ghi', 'dni', 'dhi', 'air_temperature',
+    'wind_speed', 'wind_direction', 'surface_pressure',
+    'relative_humidity', 'dew_point', 'solar_zenith_angle'
 ]
+
 selected_attributes = st.sidebar.multiselect(
-    "Select Parameters", available_attributes, default=[available_attributes[0], available_attributes[3]]
+    "Solar Attributes",
+    available_attributes,
+    default=['ghi', 'dni', 'dhi', 'air_temperature'],
+    help="Select parameters to visualize"
 )
-interval = st.sidebar.selectbox("Data Interval", ["30", "60"], format_func=lambda x: f"{x} minutes")
 
-# Visualization options
-st.sidebar.subheader("Visualization Options")
-chart_type = st.sidebar.selectbox(
-    "Chart Type", ["Line Chart", "Area Chart", "Bar Chart"], index=0
-)
-show_monthly_avg = st.sidebar.checkbox("Show Monthly Averages", value=True)
-
-# Data fetch trigger
-fetch_data = st.sidebar.button("🔍 Fetch Solar Data", type="primary")
-
-# Main data fetch, error handling, and visualization
-if fetch_data:
-    if not selected_attributes:
-        st.error("❌ Please select at least one parameter")
-        st.stop()
-    with st.spinner("Fetching solar resource data..."):
-        try:
-            base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-download.csv"
-            params = {
-                "api_key": api_key,
-                "wkt": f"POINT({longitude} {latitude})",
-                "names": year,
-                "attributes": ",".join(selected_attributes),
-                "interval": interval,
-                "utc": "false",
-                "leap_day": "false",
-                "email": "user@example.com"
-            }
-            response = requests.get(base_url, params=params)
-            if response.status_code == 200:
-                from io import StringIO
-                lines = response.text.split('\n')
-                csv_data = '\n'.join(lines[2:])
-                df = pd.read_csv(StringIO(csv_data))
-                df['DateTime'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute']])
-                st.success(f"✅ {len(df)} records loaded for ({latitude:.4f}, {longitude:.4f})")
-
-                # Show metrics
-                st.subheader("Data Overview")
-                summary_cols = st.columns(len(selected_attributes))
-                for idx, attr in enumerate(selected_attributes):
-                    if attr in df.columns:
-                        with summary_cols[idx]:
-                            st.metric(
-                                label=attr.upper().replace("_", " "),
-                                value=f"{df[attr].mean():.2f}",
-                                delta=f"Max: {df[attr].max():.2f}"
-                            )
-
-                # Plot charts
-                st.subheader("Resource Timeline")
-                for attr in selected_attributes:
-                    if attr in df.columns:
-                        fig = go.Figure()
-                        if chart_type == "Line Chart":
+# Fetch data button
+if st.sidebar.button("🔍 Fetch Solar Data", type="primary"):
+    if not api_key:
+        st.error("❌ Please provide your NREL API key.")
+    elif not selected_attributes:
+        st.error("❌ Please select at least one attribute.")
+    else:
+        latitude = st.session_state.latitude
+        longitude = st.session_state.longitude
+        
+        # NSRDB API endpoint
+        base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-download.csv"
+        params = {
+            'api_key': api_key,
+            'wkt': f'POINT({longitude} {latitude})',
+            'names': year,
+            'interval': interval,
+            'attributes': ','.join(selected_attributes),
+            'email': 'user@example.com',
+            'utc': 'false'
+        }
+        
+        with st.spinner("⏳ Fetching data from NREL NSRDB API..."):
+            try:
+                response = requests.get(base_url, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    # Parse CSV data
+                    from io import StringIO
+                    csv_data = StringIO(response.text)
+                    df = pd.read_csv(csv_data, skiprows=2)
+                    
+                    # Create DateTime column
+                    df['DateTime'] = pd.to_datetime(
+                        df[['Year', 'Month', 'Day', 'Hour', 'Minute']]
+                    )
+                    
+                    st.success(f"✅ Successfully fetched {len(df)} records!")
+                    
+                    # Display summary statistics
+                    st.subheader("📊 Data Summary")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Total Records", f"{len(df):,}")
+                    with col2:
+                        st.metric("Date Range", f"{df['DateTime'].min().date()} to {df['DateTime'].max().date()}")
+                    with col3:
+                        if 'ghi' in df.columns:
+                            st.metric("Avg GHI", f"{df['ghi'].mean():.2f} W/m²")
+                    with col4:
+                        if 'air_temperature' in df.columns:
+                            st.metric("Avg Temp", f"{df['air_temperature'].mean():.2f} °C")
+                    
+                    # Time series visualization
+                    st.subheader("📈 Time Series Visualization")
+                    fig = go.Figure()
+                    
+                    for attr in selected_attributes:
+                        if attr in df.columns:
                             fig.add_trace(go.Scatter(
-                                x=df['DateTime'], y=df[attr],
-                                mode='lines', name=attr, line=dict(width=1)
+                                x=df['DateTime'],
+                                y=df[attr],
+                                mode='lines',
+                                name=attr.upper().replace('_', ' ')
                             ))
-                        elif chart_type == "Area Chart":
-                            fig.add_trace(go.Scatter(
-                                x=df['DateTime'], y=df[attr], fill='tozeroy', name=attr
-                            ))
-                        else:  # Bar Chart
-                            daily_avg = df.groupby(df['DateTime'].dt.date)[attr].mean()
-                            fig.add_trace(go.Bar(
-                                x=daily_avg.index, y=daily_avg.values, name=attr
-                            ))
-                        fig.update_layout(
-                            title=f"{attr.upper().replace('_', ' ')} - {year}",
-                            xaxis_title="Date",
-                            yaxis_title=attr.upper(),
-                            hovermode='x unified',
-                            height=400
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-
-                # Monthly averages
-                if show_monthly_avg:
-                    st.subheader("Monthly Averages")
+                    
+                    fig.update_layout(
+                        title="Solar Resource Time Series",
+                        xaxis_title="DateTime",
+                        yaxis_title="Value",
+                        hovermode='x unified',
+                        height=500
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Monthly aggregation
+                    st.subheader("📅 Monthly Comparison")
+                    df['Month'] = df['DateTime'].dt.month
                     monthly_data = df.groupby('Month')[selected_attributes].mean()
-                    monthly_data.index = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    
                     fig_monthly = go.Figure()
                     for attr in selected_attributes:
                         if attr in monthly_data.columns:
@@ -196,35 +247,35 @@ if fetch_data:
                         height=400
                     )
                     st.plotly_chart(fig_monthly, use_container_width=True)
-
-                # Show data table and download
-                st.subheader("Raw Data")
-                st.dataframe(df[['DateTime'] + selected_attributes].head(100))
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="⬇️ Download Full Dataset (CSV)",
-                    data=csv,
-                    file_name=f"solar_data_{latitude}_{longitude}_{year}.csv",
-                    mime="text/csv"
-                )
-            elif response.status_code == 403:
-                st.error("❌ API Key Error: Invalid or unauthorized API key. Please check your NREL API key.")
-            elif response.status_code == 429:
-                st.error("❌ Rate Limit Error: Too many requests. Please wait and try again.")
-            else:
-                st.error(f"❌ API Error: Status {response.status_code}. {response.text}")
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Network Error: Unable to connect to NREL API. {str(e)}")
-        except Exception as e:
-            st.error(f"❌ Unexpected Error: {str(e)}")
-            st.exception(e)
+                    
+                    # Show data table and download
+                    st.subheader("Raw Data")
+                    st.dataframe(df[['DateTime'] + selected_attributes].head(100))
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label="⬇️ Download Full Dataset (CSV)",
+                        data=csv,
+                        file_name=f"solar_data_{latitude}_{longitude}_{year}.csv",
+                        mime="text/csv"
+                    )
+                    
+                elif response.status_code == 403:
+                    st.error("❌ API Key Error: Invalid or unauthorized API key. Please check your NREL API key.")
+                elif response.status_code == 429:
+                    st.error("❌ Rate Limit Error: Too many requests. Please wait and try again.")
+                else:
+                    st.error(f"❌ API Error: Status {response.status_code}. {response.text}")
+                    
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Network Error: Unable to connect to NREL API. {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Unexpected Error: {str(e)}")
+                st.exception(e)
 
 # Footer
 st.markdown("---")
 st.markdown("""
 **About:** This dashboard uses NREL NSRDB API to provide deep solar resource insights.
-
 **Data Source:** [National Solar Radiation Database (NSRDB)](https://nsrdb.nrel.gov/)
-
 **Note:** Data coverage and intervals may vary by location and year.
 """)

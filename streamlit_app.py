@@ -129,8 +129,6 @@ year = st.sidebar.selectbox(
     list(range(2020, 1997, -1)),  # 2020 down to 1998
     help="Select the year for solar data"
 )
-)
-
 # Interval selection
 interval = st.sidebar.selectbox(
     "Time Interval",

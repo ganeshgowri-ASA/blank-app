@@ -1,19 +1,36 @@
-# 🎈 Blank app template
+# ☀️ Solar Resource Dashboard | Streamlit App
 
-A simple Streamlit app template for you to modify!
+**Author:** Ganesh Gowri
+**Version:** 1.0  
+**Last Updated:** 2025-10-18
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+## Overview
 
-### How to run it on your own machine
+Production-ready web dashboard to assess solar resource potential by location.
+Includes map selection, advanced solar data charts, meteorological overlays, CSV export, and modern UI.
 
-1. Install the requirements
+## Main Features
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+- API key management (NREL - National Solar Radiation Database)
+- Manual/map-based location selection
+- Solar resource parameters: GHI, DNI, DHI, air temperature, wind, pressure, humidity, zenith angle
+- Year, time interval, and data attribute selection
+- Interactive Folium map overlays (satellite, terrain, light map)
+- Dynamic charts with Plotly (timeline, monthly averages, bar/area/line)
+- Metrics and professional UI/UX
+- Data download (CSV)
+- Full error handling for network, API, and input issues
 
-2. Run the app
+## Tech Stack
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+- Python 3.x
+- Streamlit
+- Folium
+- streamlit-folium
+- Plotly
+- Pandas
+- NREL NSRDB API
+
+## Installation & Usage
+
+1. **Clone the repo:**

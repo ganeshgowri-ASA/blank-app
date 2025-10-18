@@ -33,4 +33,35 @@ Includes map selection, advanced solar data charts, meteorological overlays, CSV
 
 ## Installation & Usage
 
-1. **Clone the repo:**
+1. **Clone the repo:** git clone https://github.com/ganeshgowri-ASA/blank-app.git
+cd blank-app
+2. **Install requirements:**
+   pip install streamlit streamlit-folium folium plotly pandas requests
+3. **API Key:**  
+Get your free NREL API key: [NREL Developer Signup](https://developer.nrel.gov/signup/)
+Enter your API key in the sidebar when running the app.
+4. **Run the app:**
+5. **Deployment:**  
+Works on [Streamlit Cloud](https://share.streamlit.io) for live sharing.
+
+## Screenshots
+
+_Add screenshots of key screens here for demo, or use the Streamlit deployment link to showcase._
+
+## Contributor/Contact
+
+- Ganesh Gowri (Reliance Industries, Solar PV)
+- AI Agentic Browser
+
+## License
+
+MIT License (or specify your repo's license)
+
+---
+
+## Notes
+
+- Data source: [NREL NSRDB](https://nsrdb.nrel.gov/)
+- Data coverage and quality may vary by region and year.
+
+

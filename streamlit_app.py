@@ -169,7 +169,7 @@ if st.sidebar.button("🔍 Fetch Solar Data", type="primary"):
             'names': year,
             'interval': interval,
             'attributes': ','.join(selected_attributes),
-            'email': 'user@example.com',
+            'email': 'ganeshgowri@outlook.com',
             'utc': 'false'
         }
         

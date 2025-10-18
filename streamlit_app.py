@@ -126,8 +126,9 @@ st.sidebar.header("Data Parameters")
 # Year selection
 year = st.sidebar.selectbox(
     "Year",
-    list(range(2023, 1997, -1)),
+    list(range(2020, 1997, -1)),  # 2020 down to 1998
     help="Select the year for solar data"
+)
 )
 
 # Interval selection
